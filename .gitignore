@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+
+# Secrets - never commit a key
+.env
+.env.local
+
+# Local state (ledger, sqlite)
+.regent/
+*.db
+*.sqlite3
+
+# Tooling
+dist/
+build/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
+Thumbs.db

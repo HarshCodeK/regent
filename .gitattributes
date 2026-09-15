@@ -1,0 +1,5 @@
+# Normalize line endings in the repository: LF everywhere, so a Windows clone
+# and a Linux CI runner see the same bytes.
+* text=auto eol=lf
+*.py text eol=lf
+*.png binary
