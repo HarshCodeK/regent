@@ -1,0 +1,53 @@
+{
+  "repo": "regent",
+  "tier": "S",
+  "domain": "AI infrastructure",
+  "generated_at": "2026-09-15T11:58:37+00:00",
+  "gate": {
+    "tests_passed": 32,
+    "tests_failed": 0,
+    "coverage_pct": 99
+  },
+  "headline": [
+    {
+      "label": "tests passing",
+      "value": "32",
+      "command": "python -m pytest -q",
+      "tone": "accent"
+    },
+    {
+      "label": "coverage on src",
+      "value": "99%",
+      "command": "python -m pytest -q --cov=src",
+      "tone": "info"
+    },
+    {
+      "label": "http endpoints",
+      "value": "5",
+      "command": "grep -c '@app.' src/app.py",
+      "tone": ""
+    }
+  ],
+  "rows": [
+    {
+      "metric": "tests passing",
+      "value": 32,
+      "command": "python -m pytest -q"
+    },
+    {
+      "metric": "coverage on src",
+      "value": 99,
+      "command": "python -m pytest -q --cov=src"
+    },
+    {
+      "metric": "http endpoints",
+      "value": 5,
+      "command": "grep -c '@app.' src/app.py"
+    },
+    {
+      "metric": "money path floats",
+      "value": 0,
+      "command": "python -m pytest tests/test_ledger.py -q"
+    }
+  ]
+}
