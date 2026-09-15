@@ -123,8 +123,14 @@ class Ledger:
             ).fetchone()
             by_model = conn.execute(
                 """SELECT served_model, COUNT(*) AS calls,
+                          COALESCE(SUM(prompt_tokens), 0) AS prompt_tokens,
+                          COALESCE(SUM(completion_tokens), 0) AS completion_tokens,
                           COALESCE(SUM(cost_micro_usd), 0) AS cost_micro_usd
                    FROM llm_calls GROUP BY served_model ORDER BY calls DESC"""
+            ).fetchall()
+            recent = conn.execute(
+                """SELECT created_at, served_model, status, latency_ms, cost_micro_usd
+                   FROM llm_calls ORDER BY created_at DESC LIMIT 20"""
             ).fetchall()
         return {
             "calls": totals["calls"],
@@ -133,4 +139,5 @@ class Ledger:
             "cost_micro_usd": totals["cost_micro_usd"],
             "cost_usd": round(totals["cost_micro_usd"] / 1_000_000, 6),
             "by_model": [dict(row) for row in by_model],
+            "recent": [dict(row) for row in recent],
         }

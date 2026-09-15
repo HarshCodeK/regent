@@ -11,7 +11,10 @@ from __future__ import annotations
 import time
 import uuid
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+from pathlib import Path
 
 from . import __version__
 from .config import Settings
@@ -51,6 +54,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = cfg
     app.state.provider = provider
     app.state.ledger = ledger
+
+    # Static dashboard
+    _public = Path(__file__).resolve().parent.parent / "public"
+    app.mount("/assets", StaticFiles(directory=str(_public / "assets")), name="assets")
 
     @app.get("/")
     def service_card() -> dict:
@@ -170,7 +177,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "cost_usd": round(cost_micro_usd / 1_000_000, 6),
                 "task_class": body.task_class,
             },
-        )
+            )
+
+    @app.get("/dashboard", response_class=Response)
+    def dashboard_html():
+        html_path = _public / "dashboard.html"
+        if not html_path.exists():
+            return {"error": "dashboard not found"}
+        return FileResponse(html_path)
 
     return app
 
