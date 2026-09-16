@@ -2,8 +2,10 @@
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Regent — Cost Accounting Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<meta name="description" content="LLM gateway with integer micro-USD cost accounting. Every call metered, budgeted, ledgered.">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/assets/house.css">
+<link rel="stylesheet" href="/assets/house-ui.css">
 <style>
 :root{
   --bg:#0b0f14;--card:#121822;--line:rgba(31,42,55,.6);--text:#e5e7eb;
@@ -38,35 +40,47 @@ code{font-family:ui-monospace;font-size:11px;background:rgba(255,255,255,.04);pa
 .badge.warn{background:rgba(245,154,11,.12);color:var(--warn)}
 .cost{font-family:ui-monospace;font-size:14px;font-weight:600}
 </style></head><body>
+<header class="topbar"><div class="wrap">
+  <a class="brand" href="/dashboard"><span class="mark">◈</span> Regent</a>
+  <nav class="topnav"><a href="/dashboard" class="active">Dashboard</a><a href="/docs">API docs</a><a href="https://github.com/HarshCodeK/regent">GitHub</a></nav>
+</div></header>
 <div class="wrap">
-  <header>
-    <div class="name">Regent</div>
-    <div class="sub">LLM gateway with integer micro-USD cost accounting — dashboards, not guesswork.</div>
-  </header>
+  <div class="hero">
+    <span class="eyebrow"><span class="dot"></span>integer micro-USD · zero float on money paths</span>
+    <h1>Every call metered. <span class="grad">Every cent accounted.</span></h1>
+    <p class="lead">OpenAI-compatible gateway. <strong>32 tests, 99% coverage.</strong> Costs stored as integer micro-USD — unknown prices flagged, never guessed.</p>
+  </div>
 
   <div class="stats" id="stats">
     <div class="stat"><div class="v" id="stat-calls">0</div><div class="l">Total calls</div></div>
-    <div class="stat"><div class="v ok" id="stat-cost">$0.0000</div><div class="l">Total cost</div></div>
-    <div class="stat"><div class="v accent" id="stat-prompt">0</div><div class="l">Input tokens</div></div>
-    <div class="stat"><div class="v warn" id="stat-output">0</div><div class="l">Output tokens</div></div>
+    <div class="stat"><div class="v green" id="stat-cost">$0.0000</div><div class="l">Total cost</div></div>
+    <div class="stat"><div class="v blue" id="stat-prompt">0</div><div class="l">Input tokens</div></div>
+    <div class="stat"><div class="v amber" id="stat-output">0</div><div class="l">Output tokens</div></div>
     <div class="stat"><div class="v" id="stat-avg">$0.0000</div><div class="l">Avg cost / call</div></div>
   </div>
 
-  <div class="panel">
-    <h3>Cost by model (integer micro-USD, never float)</h3>
-    <div id="by-model">
-      <p class="muted">No data yet. Send a request through the gateway.</p>
+  <section>
+    <h2>Cost by model</h2>
+    <p class="sub">Integer micro-USD, never float. Width of each bar is share of total spend.</p>
+    <div class="card"><h3>◈ Ledger <span class="spacer"></span><span class="pill info">append-only</span></h3>
+      <div id="by-model">
+        <p class="empty">No data yet. Send a request through the gateway.</p>
+      </div>
+      <p class="muted" style="margin-top:10px">Endpoint: <code>POST /v1/chat/completions</code> with <code>Authorization: Bearer kk-...</code></p>
     </div>
-    <p class="muted" style="margin-top:8px">Endpoint: <code>POST /v1/chat/completions</code> with <code>Authorization: Bearer kk-...</code></p>
-  </div>
+  </section>
 
-  <div class="panel">
-    <h3>Recent calls (last 20)</h3>
-    <div id="recent">
-      <p class="muted">No calls logged.</p>
+  <section>
+    <h2>Recent calls</h2>
+    <p class="sub">Last 20 ledger entries, live.</p>
+    <div class="card"><h3>● Stream</h3>
+      <div id="recent">
+        <p class="empty">No calls logged.</p>
+      </div>
     </div>
-  </div>
+  </section>
 </div>
+<footer><div class="wrap"><a href="https://github.com/HarshCodeK/regent">github.com/HarshCodeK/regent</a><span style="float:right" class="muted">MIT · integer money only</span></div></footer>
 
 <script>
 async function fetchJSON(url){const r=await fetch(url);if(!r.ok)throw new Error(r.status);return r.json();}
@@ -85,31 +99,33 @@ async function load(){
 
     // by model
     const byModel=d.by_model||[];
-    const maxCost=Math.max(...byModel.map(r=>r.cost_micro_usd||0),1);
+    const totalCost=byModel.reduce((s,r)=>s+(r.cost_micro_usd||0),0)||1;
+    const totalCalls=byModel.reduce((s,r)=>s+(r.calls||0),0)||1;
     document.getElementById("by-model").innerHTML=byModel.length===0
-      ?'<p class="muted">No calls logged yet.</p>'
-      :'<table><thead><tr><th>Model</th><th>Calls</th><th>In / Out tokens</th><th>Cost (USD)</th></tr></thead><tbody>'+
-      byModel.map(r=>`<tr>
+      ?'<p class="empty">No calls logged yet.</p>'
+      :'<table class="hu"><thead><tr><th>Model</th><th>Calls</th><th>In / Out</th><th>Share</th><th style="text-align:right">Cost</th></tr></thead><tbody>'+
+      byModel.map(r=>{const share=Math.round(100*(r.cost_micro_usd||0)/totalCost);return`<tr>
         <td><code>${r.served_model}</code></td>
         <td>${r.calls}</td>
-        <td>${r.prompt_tokens||0} / ${r.completion_tokens||0}</td>
-        <td class="cost">$${(r.cost_micro_usd/1_000_000).toFixed(6)}</td>
-      </tr>`).join("")+"</tbody></table>";
+        <td class="muted">${r.prompt_tokens||0} / ${r.completion_tokens||0}</td>
+        <td style="min-width:120px"><div class="bar"><i style="width:${share}%"></i></div></td>
+        <td style="text-align:right" class="mono">$${(r.cost_micro_usd/1_000_000).toFixed(6)}</td>
+      </tr>`;}).join("")+"</tbody></table>";
 
     // recent calls
     const recent=d.recent||[];
     document.getElementById("recent").innerHTML=recent.length===0
-      ?'<p class="muted">No calls logged yet. Send a request through the gateway first.</p>'
-      :'<table><thead><tr><th>Time</th><th>Model</th><th>Status</th><th>Latency</th><th>Cost</th></tr></thead><tbody>'+
+      ?'<p class="empty">No calls logged yet. Send a request through the gateway first.</p>'
+      :'<table class="hu"><thead><tr><th>Time</th><th>Model</th><th>Status</th><th>Latency</th><th style="text-align:right">Cost</th></tr></thead><tbody>'+
       recent.map(r=>{const ts=new Date(r.created_at*1000).toLocaleTimeString();const costRzp=(r.cost_micro_usd/1_000_000).toFixed(6);return`<tr>
-        <td>${ts}</td>
+        <td class="muted">${ts}</td>
         <td><code>${r.served_model}</code></td>
-        <td><span class="badge ${r.status==='ok'?'ok':'bad'}">${r.status}</span></td>
-        <td>${r.latency_ms}ms</td>
-        <td class="cost">$${costRzp}</td>
+        <td><span class="pill ${r.status==='ok'?'ok':'bad'}">${r.status}</span></td>
+        <td class="mono">${r.latency_ms}ms</td>
+        <td style="text-align:right" class="mono">$${costRzp}</td>
       </tr>`;}).join("")+"</tbody></table>";
   }catch(e){
-    document.getElementById("by-model").innerHTML='<p class="muted">Backend not running. Start with: <code>python -m uvicorn src.app:app --reload</code></p>';
+    document.getElementById("by-model").innerHTML='<p class="empty">Backend not running. Start with: <code>python -m uvicorn src.app:app --reload</code></p>';
   }
 }
 
